@@ -1,23 +1,36 @@
 import { useLoaderData, Link, Navigate } from 'react-router-dom';
 import axios from 'axios';
 import Wrapper from '../assets/wrappers/CocktailPage';
+import { useQuery } from '@tanstack/react-query';
 
 const singleCocktailUrl =
   'https://www.thecocktaildb.com/api/json/v1/1/lookup.php?i=';
 
 // export const loader = async (data) => { IF YOU CONSOLE LOG THIS WE CAN SEE THE WHOLE OBJECT OF WHICH PARAMS IS ONE PROPERTY.
-export const loader = async ({ params }) => {
-  //console.log('params:', params);
-  const { id } = params;
-  const { data } = await axios.get(`${singleCocktailUrl}${id}`);
-  //console.log(response);
-  return { id, data };
+
+const singleCocktailQuery = id => {
+  return {
+    queryKey: ['cocktail', id],
+    queryFn: async () => {
+      const { data } = await axios.get(`${singleCocktailUrl}${id}`);
+      return data;
+    }
+  };
 };
+export const loader =
+  queryClient =>
+  async ({ params }) => {
+    //console.log('params:', params);
+    const { id } = params;
+    await queryClient.ensureQueryData(singleCocktailQuery(id));
+    //console.log(response);
+    return { id };
+  };
 
 const Cocktail = () => {
-  const { id, data } = useLoaderData();
+  const { id } = useLoaderData();
 
-  // if (!data) return <Navigate to="/" />;
+  const { data } = useQuery(singleCocktailQuery(id));
   if (!data || !data.drinks || data.drinks.length === 0) {
     return <Navigate to="/" />;
   }

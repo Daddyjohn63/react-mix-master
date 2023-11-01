@@ -6,19 +6,30 @@ import SearchForm from '../components/SearchForm';
 const cocktailSearchUrl =
   'https://www.thecocktaildb.com/api/json/v1/1/search.php?s=';
 
-export const loader = async ({ request }) => {
-  const url = new URL(request.url); //the request object has a url property.
-  //console.log('request:', request);
-  console.log(url);
+import { QueryClient, useQuery } from '@tanstack/react-query';
 
-  const searchTerm = url.searchParams.get('search') || '';
-  const response = await axios.get(`${cocktailSearchUrl}${searchTerm}`);
-  return { drinks: response.data.drinks, searchTerm };
+const searchCocktailsQuery = searchTerm => {
+  return {
+    queryKey: ['search', searchTerm || 'all'],
+    queryFn: async () => {
+      const response = await axios.get(`${cocktailSearchUrl}${searchTerm}`);
+      return response.data.drinks;
+    }
+  };
 };
 
+export const loader =
+  QueryClient =>
+  async ({ request }) => {
+    const url = new URL(request.url);
+    const searchTerm = url.searchParams.get('search') || '';
+    await QueryClient.ensureQueryData(searchCocktailsQuery(searchTerm));
+    return { searchTerm };
+  };
+
 const Landing = () => {
-  const { drinks, searchTerm } = useLoaderData();
-  // console.log(drinks);
+  const { searchTerm } = useLoaderData();
+  const { data: drinks } = useQuery(searchCocktailsQuery(searchTerm));
   return (
     <>
       <SearchForm searchTerm={searchTerm} />
